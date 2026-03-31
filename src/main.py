@@ -61,8 +61,14 @@ def _poll_once(client: IMAPClient, config, state: State) -> None:
         state.save()
         return
 
-    subjects = [m.get("subject", "(无主题)") for m in messages]
-    logger.info("拉取了 %d 封邮件: %s", len(messages), "、".join(subjects))
+    # 先分离新邮件和已处理邮件
+    new_messages = [m for m in messages if not state.is_processed(m["id"])]
+
+    if new_messages:
+        subjects = [m.get("subject", "(无主题)") for m in new_messages]
+        logger.info("拉取了 %d 封新邮件: %s", len(new_messages), "、".join(subjects))
+    else:
+        logger.info("本轮无新邮件（%d 封已处理）", len(messages))
 
     forwarded_count = 0
     for msg in messages:
