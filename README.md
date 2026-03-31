@@ -9,6 +9,7 @@
 - 发件人支持精确匹配和域名通配（`@domain.com`）
 - 已处理邮件持久化，重启不遗漏不重复
 - 自动断线重连
+- 可配置拉取时间范围和数量限制
 
 ## 前置条件
 
@@ -45,7 +46,9 @@ gmail:
   app_password: xxxx xxxx xxxx xxxx    # 第 1 步生成的应用专用密码
 
 poll:
-  interval_seconds: 5
+  interval_seconds: 5       # 轮询间隔（秒）
+  fetch_within_hours: 1     # 只拉取最近 N 小时的邮件
+  fetch_max_count: 100      # 单次最多拉取邮件数
 
 rules:
   - name: "转发紧急邮件"
@@ -62,8 +65,8 @@ rules:
       - "manager@company.com"
 
 forward:
-  add_prefix: true
-  include_original_headers: true
+  add_prefix: true                # 主题添加 [转发] 前缀
+  include_original_headers: true  # 正文包含原始邮件头
 ```
 
 ### 4. 运行
@@ -110,5 +113,5 @@ gmail-forward/
 ## 注意事项
 
 - 转发的邮件会出现在 Gmail **已发送** 文件夹
-- `state.json` 记录已处理邮件，删除后将重新处理未读邮件
-- 建议将 `poll.interval_seconds` 设为 5 秒（默认值），平衡及时性和资源消耗
+- `state.json` 记录已处理邮件和轮询历史，删除后将重新处理
+- 默认拉取最近 1 小时、最多 100 封邮件，可通过 `poll` 配置调整
