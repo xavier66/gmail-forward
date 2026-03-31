@@ -1,0 +1,38 @@
+# Gmail OAuth 设置
+gmail:
+  # 从 Google Cloud Console 下载的 OAuth 2.0 客户端密钥文件
+  client_secret_file: credentials/client_secret.json
+  # 授权后自动生成的 token 文件
+  token_file: credentials/token.json
+
+# 轮询设置
+poll:
+  # 每 N 秒检查一次新邮件
+  interval_seconds: 5
+
+# 转发规则（支持多条，按顺序匹配）
+rules:
+  - name: "示例规则-转发特定发件人"
+    conditions:
+      # 发件人匹配（精确地址 或 @domain.com 域名匹配）
+      from: ["boss@company.com", "@important-client.com"]
+      # 主题包含任一关键词（OR 匹配，不填则不限制）
+      subject_contains: ["紧急", "urgent", "重要"]
+      # Gmail 标签（不填则不限制）
+      labels: ["INBOX"]
+    # 匹配后转发到这些地址
+    forward_to: ["admin@company.com"]
+
+  - name: "示例规则-转发所有客户邮件"
+    conditions:
+      from: ["@client-domain.com"]
+    forward_to:
+      - "sales@company.com"
+      - "manager@company.com"
+
+# 转发行为
+forward:
+  # 转发邮件主题是否添加 [转发] 前缀
+  add_prefix: true
+  # 是否在正文中包含原始邮件头（发件人、日期等）
+  include_original_headers: true

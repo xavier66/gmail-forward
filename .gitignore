@@ -1,0 +1,33 @@
+# Credentials & tokens
+credentials/client_secret*.json
+credentials/token.json
+credentials/
+
+# State
+state.json
+
+# Config (contains personal info)
+config.yaml
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Venv
+.venv/
+venv/
+env/
