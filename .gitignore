@@ -1,13 +1,8 @@
-# Credentials & tokens
-credentials/client_secret*.json
-credentials/token.json
-credentials/
+# Config (contains password)
+config.yaml
 
 # State
 state.json
-
-# Config (contains personal info)
-config.yaml
 
 # Python
 __pycache__/

@@ -9,8 +9,8 @@ import yaml
 
 @dataclass
 class GmailConfig:
-    client_secret_file: str = "credentials/client_secret.json"
-    token_file: str = "credentials/token.json"
+    email: str = ""
+    app_password: str = ""
 
 
 @dataclass
@@ -22,7 +22,6 @@ class PollConfig:
 class Condition:
     from_: list[str] = field(default_factory=list)
     subject_contains: list[str] = field(default_factory=list)
-    labels: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -50,7 +49,6 @@ def _parse_condition(data: dict[str, Any]) -> Condition:
     return Condition(
         from_=data.get("from", []),
         subject_contains=data.get("subject_contains", []),
-        labels=data.get("labels", []),
     )
 
 
@@ -77,12 +75,8 @@ def load_config(path: str = "config.yaml") -> AppConfig:
 
     config = AppConfig(
         gmail=GmailConfig(
-            client_secret_file=data.get("gmail", {}).get(
-                "client_secret_file", GmailConfig.client_secret_file
-            ),
-            token_file=data.get("gmail", {}).get(
-                "token_file", GmailConfig.token_file
-            ),
+            email=data.get("gmail", {}).get("email", ""),
+            app_password=data.get("gmail", {}).get("app_password", ""),
         ),
         poll=PollConfig(
             interval_seconds=data.get("poll", {}).get(
@@ -106,13 +100,17 @@ def load_config(path: str = "config.yaml") -> AppConfig:
 
 def _validate(config: AppConfig) -> None:
     """验证配置合法性"""
+    if not config.gmail.email:
+        raise ValueError("gmail.email 不能为空")
+    if not config.gmail.app_password:
+        raise ValueError("gmail.app_password 不能为空")
     if config.poll.interval_seconds < 1:
         raise ValueError("poll.interval_seconds 不能小于 1 秒")
 
     for i, rule in enumerate(config.rules):
         if not rule.forward_to:
             raise ValueError(f"规则 '{rule.name}' (第 {i + 1} 条) 缺少 forward_to")
-        if not rule.conditions.from_ and not rule.conditions.subject_contains and not rule.conditions.labels:
+        if not rule.conditions.from_ and not rule.conditions.subject_contains:
             raise ValueError(
                 f"规则 '{rule.name}' (第 {i + 1} 条) 至少需要一个过滤条件"
             )

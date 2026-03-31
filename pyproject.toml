@@ -4,13 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gmail-forward"
-version = "0.1.0"
+version = "0.2.0"
 description = "Gmail 条件转发工具 - 根据规则自动转发邮件"
 requires-python = ">=3.10"
 dependencies = [
-    "google-api-python-client>=2.100.0",
-    "google-auth-oauthlib>=1.1.0",
-    "google-auth-httplib2>=0.1.0",
     "pyyaml>=6.0",
 ]
 

@@ -30,9 +30,6 @@ def _match_rule(message: dict, rule: Rule) -> bool:
     if cond.subject_contains and not _match_subject(message, cond.subject_contains):
         return False
 
-    if cond.labels and not _match_labels(message, cond.labels):
-        return False
-
     return True
 
 
@@ -44,11 +41,9 @@ def _match_from(message: dict, patterns: list[str]) -> bool:
     for pattern in patterns:
         pattern = pattern.lower().strip()
         if pattern.startswith("@"):
-            # 域名匹配
             if from_addr.endswith(pattern) or from_addr.split("@", 1)[-1] == pattern[1:]:
                 return True
         else:
-            # 精确匹配
             if from_addr == pattern:
                 return True
 
@@ -59,9 +54,3 @@ def _match_subject(message: dict, keywords: list[str]) -> bool:
     """主题关键词匹配（OR 关系，大小写不敏感）"""
     subject = message.get("subject", "").lower()
     return any(kw.lower() in subject for kw in keywords)
-
-
-def _match_labels(message: dict, required_labels: list[str]) -> bool:
-    """标签匹配（OR 关系）"""
-    msg_labels = set(message.get("labelIds", []))
-    return any(label in msg_labels for label in required_labels)

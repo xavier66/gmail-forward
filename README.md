@@ -1,52 +1,50 @@
 # Gmail 条件转发工具
 
-根据配置规则自动转发 Gmail 邮件到指定邮箱。部署在服务器上常驻运行，通过 Gmail API 增量轮询新邮件。
+根据配置规则自动转发 Gmail 邮件到指定邮箱。部署在服务器上常驻运行，通过 IMAP 轮询新邮件，SMTP 转发。
 
 ## 功能
 
-- 按发件人、主题关键词、标签过滤邮件
+- 按发件人、主题关键词过滤邮件
 - 支持多条转发规则，每条规则可转发到多个收件人
 - 发件人支持精确匹配和域名通配（`@domain.com`）
-- 增量处理，重启不遗漏不重复
-- 自动刷新 OAuth token，无需人工干预
+- 已处理邮件持久化，重启不遗漏不重复
+- 自动断线重连
+
+## 费用说明
+
+> **本项目完全免费，所有依赖服务均零成本。**
+
+| 组件 | 费用 | 说明 |
+|------|------|------|
+| Gmail IMAP/SMTP | **免费** | Gmail 内置功能，个人账号即可使用 |
+| 应用专用密码 | **免费** | Google 账号设置中一键生成 |
+| Python 及依赖库 | **免费** | 仅依赖 `pyyaml`，其余全部 Python 内置库 |
+| 服务器 | 取决于你 | 可运行在任何已有服务器、VPS 或树莓派上 |
+
+无隐藏费用，无付费计划，无需绑定信用卡。
 
 ## 前置条件
 
 - Python 3.10+
-- Google 账号
+- Gmail 账号（需开启两步验证）
 
-## Google Cloud 设置
+## 快速开始
 
-### 1. 创建项目并启用 Gmail API
+### 1. 生成应用专用密码
 
-1. 打开 [Google Cloud Console](https://console.cloud.google.com/)
-2. 创建新项目（或选择已有项目）
-3. 进入 **API 和服务 → 库**，搜索 **Gmail API**，点击启用
+1. 打开 [Google 账号安全设置](https://myaccount.google.com/security)
+2. 确保已开启 **两步验证**
+3. 搜索 **应用专用密码**（或在两步验证页面底部找到）
+4. 选择"邮件"，生成一个 16 位密码，复制备用
 
-### 2. 创建 OAuth 2.0 凭据
-
-1. 进入 **API 和服务 → 凭据**
-2. 点击 **创建凭据 → OAuth 客户端 ID**
-3. 应用类型选择 **桌面应用**
-4. 下载 JSON 文件，重命名为 `client_secret.json`
-5. 放入项目的 `credentials/` 目录
-
-### 3. 配置 OAuth 同意屏幕
-
-1. 进入 **API 和服务 → OAuth 同意屏幕**
-2. 选择 **外部**，填写应用名称和邮箱
-3. 添加范围：`https://mail.google.com/`
-4. 添加测试用户（你自己的 Gmail 地址）
-5. **重要**：发布应用（设为"正式版"），否则 refresh_token 7 天后过期
-
-## 安装
+### 2. 安装
 
 ```bash
-git clone <repo-url> && cd gmail-forward
+git clone https://github.com/xavier66/gmail-forward.git && cd gmail-forward
 pip install -r requirements.txt
 ```
 
-## 配置
+### 3. 配置
 
 ```bash
 cp config.yaml.example config.yaml
@@ -56,11 +54,11 @@ cp config.yaml.example config.yaml
 
 ```yaml
 gmail:
-  client_secret_file: credentials/client_secret.json
-  token_file: credentials/token.json
+  email: your-email@gmail.com
+  app_password: xxxx xxxx xxxx xxxx    # 第 1 步生成的应用专用密码
 
 poll:
-  interval_seconds: 30
+  interval_seconds: 5
 
 rules:
   - name: "转发紧急邮件"
@@ -81,51 +79,31 @@ forward:
   include_original_headers: true
 ```
 
-### 规则说明
-
-| 字段 | 说明 |
-|------|------|
-| `conditions.from` | 发件人匹配。精确地址或 `@domain.com` 域名通配 |
-| `conditions.subject_contains` | 主题包含关键词（OR 匹配） |
-| `conditions.labels` | Gmail 标签（如 `INBOX`、`IMPORTANT`） |
-| `forward_to` | 转发目标地址列表 |
-
-同一规则内各条件为 AND 关系（全部满足才转发）。
-
-## 运行
+### 4. 运行
 
 ```bash
 python -m src.main
 ```
 
-首次运行会自动打开浏览器进行 OAuth 授权，授权后生成 `credentials/token.json`，之后无需再次授权。
+就这样，没有 OAuth 配置，没有 Google Cloud 项目，填好邮箱和密码就能跑。
 
-## 服务器部署（systemd）
+## 规则说明
 
-创建 `/etc/systemd/system/gmail-forward.service`：
+| 字段 | 说明 |
+|------|------|
+| `conditions.from` | 发件人匹配。精确地址或 `@domain.com` 域名通配 |
+| `conditions.subject_contains` | 主题包含关键词（OR 匹配） |
+| `forward_to` | 转发目标地址列表 |
 
-```ini
-[Unit]
-Description=Gmail Forward Service
-After=network.target
+同一规则内各条件为 AND 关系（全部满足才转发）。
 
-[Service]
-Type=simple
-User=your-user
-WorkingDirectory=/path/to/gmail-forward
-ExecStart=/path/to/gmail-forward/.venv/bin/python -m src.main
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-```
+## 服务器后台运行
 
 ```bash
-sudo systemctl enable gmail-forward
-sudo systemctl start gmail-forward
-sudo systemctl status gmail-forward
+nohup python -m src.main > output.log 2>&1 &
 ```
+
+停止：`kill $(pgrep -f "python -m src.main")`
 
 ## 文件说明
 
@@ -134,19 +112,16 @@ gmail-forward/
 ├── src/
 │   ├── main.py           # 主入口，轮询循环
 │   ├── config.py         # YAML 配置加载
-│   ├── auth.py           # OAuth 2.0 认证
-│   ├── gmail_client.py   # Gmail API 封装
+│   ├── imap_client.py    # IMAP 邮件获取
 │   ├── filter_engine.py  # 邮件过滤引擎
-│   ├── forwarder.py      # 邮件转发
+│   ├── forwarder.py      # SMTP 邮件转发
 │   └── state.py          # 状态持久化
 ├── config.yaml.example   # 配置模板
-├── credentials/          # OAuth 密钥和 token
 └── state.json            # 运行状态（自动生成）
 ```
 
 ## 注意事项
 
-- 转发的邮件会出现在你的 Gmail **已发送** 文件夹
-- Gmail API 每天有用量配额（通常足够个人使用）
-- `state.json` 记录处理进度，删除后将从当前邮件重新开始（不会转发旧邮件）
-- 建议将 `poll.interval_seconds` 设为 30 秒以上，避免触发 API 限流
+- 转发的邮件会出现在 Gmail **已发送** 文件夹
+- `state.json` 记录已处理邮件，删除后将重新处理未读邮件
+- 建议将 `poll.interval_seconds` 设为 5 秒（默认值），平衡及时性和资源消耗
