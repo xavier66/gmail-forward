@@ -46,17 +46,18 @@ class IMAPClient:
             logger.warning("IMAP 连接断开，正在重连...")
         self.connect()
 
-    def fetch_unseen(self, within_hours: int = 1, max_count: int = 100) -> list[dict]:
-        """获取未读邮件，限定时间范围和最大数量"""
+    def fetch_recent(self, within_hours: int = 1, max_count: int = 100) -> list[dict]:
+        """获取最近邮件（不管是否已读），按最新降序"""
         self.ensure_connected()
 
         since_date = (datetime.now(timezone.utc) - timedelta(hours=within_hours)).strftime("%d-%b-%Y")
-        _, msg_ids = self.conn.search(None, "UNSEEN", f'(SINCE "{since_date}")')
+        _, msg_ids = self.conn.search(None, f'(SINCE "{since_date}")')
         if not msg_ids[0]:
             return []
 
         id_list = msg_ids[0].split()
         id_list = id_list[-max_count:]  # 取最近的 N 封
+        id_list.reverse()  # 降序：最新邮件在前
 
         messages = []
         for mid in id_list:

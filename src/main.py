@@ -48,14 +48,18 @@ def poll_loop(client: IMAPClient, config, state: State) -> None:
 
 def _poll_once(client: IMAPClient, config, state: State) -> None:
     """执行一次轮询"""
-    messages = client.fetch_unseen(
+    messages = client.fetch_recent(
         within_hours=config.poll.fetch_within_hours,
         max_count=config.poll.fetch_max_count,
     )
-    if not messages:
-        return
 
     state.begin_round()
+
+    if not messages:
+        logger.info("本轮无新邮件")
+        state.end_round()
+        state.save()
+        return
 
     subjects = [m.get("subject", "(无主题)") for m in messages]
     logger.info("拉取了 %d 封邮件: %s", len(messages), "、".join(subjects))
