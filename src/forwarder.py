@@ -1,5 +1,6 @@
 """邮件转发：通过 SMTP 转发邮件"""
 
+import email
 import logging
 import smtplib
 from email.mime.message import MIMEMessage
