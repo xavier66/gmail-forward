@@ -16,6 +16,8 @@ class GmailConfig:
 @dataclass
 class PollConfig:
     interval_seconds: int = 5
+    fetch_within_hours: int = 1
+    fetch_max_count: int = 100
 
 
 @dataclass
@@ -81,6 +83,12 @@ def load_config(path: str = "config.yaml") -> AppConfig:
         poll=PollConfig(
             interval_seconds=data.get("poll", {}).get(
                 "interval_seconds", PollConfig.interval_seconds
+            ),
+            fetch_within_hours=data.get("poll", {}).get(
+                "fetch_within_hours", PollConfig.fetch_within_hours
+            ),
+            fetch_max_count=data.get("poll", {}).get(
+                "fetch_max_count", PollConfig.fetch_max_count
             ),
         ),
         rules=[_parse_rule(r) for r in data.get("rules", [])],

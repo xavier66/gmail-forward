@@ -3,6 +3,7 @@
 import email
 import imaplib
 import logging
+from datetime import datetime, timedelta, timezone
 from email.header import decode_header
 
 logger = logging.getLogger(__name__)
@@ -45,14 +46,18 @@ class IMAPClient:
             logger.warning("IMAP 连接断开，正在重连...")
         self.connect()
 
-    def fetch_unseen(self) -> list[dict]:
-        """获取所有未读邮件"""
+    def fetch_unseen(self, within_hours: int = 1, max_count: int = 100) -> list[dict]:
+        """获取未读邮件，限定时间范围和最大数量"""
         self.ensure_connected()
-        _, msg_ids = self.conn.search(None, "UNSEEN")
+
+        since_date = (datetime.now(timezone.utc) - timedelta(hours=within_hours)).strftime("%d-%b-%Y")
+        _, msg_ids = self.conn.search(None, "UNSEEN", f'(SINCE "{since_date}")')
         if not msg_ids[0]:
             return []
 
         id_list = msg_ids[0].split()
+        id_list = id_list[-max_count:]  # 取最近的 N 封
+
         messages = []
         for mid in id_list:
             msg = self._fetch_message(mid)

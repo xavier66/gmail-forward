@@ -48,11 +48,17 @@ def poll_loop(client: IMAPClient, config, state: State) -> None:
 
 def _poll_once(client: IMAPClient, config, state: State) -> None:
     """执行一次轮询"""
-    messages = client.fetch_unseen()
+    messages = client.fetch_unseen(
+        within_hours=config.poll.fetch_within_hours,
+        max_count=config.poll.fetch_max_count,
+    )
     if not messages:
         return
 
-    logger.info("发现 %d 封未读邮件", len(messages))
+    state.begin_round()
+
+    subjects = [m.get("subject", "(无主题)") for m in messages]
+    logger.info("拉取了 %d 封邮件: %s", len(messages), "、".join(subjects))
 
     forwarded_count = 0
     for msg in messages:
@@ -60,17 +66,24 @@ def _poll_once(client: IMAPClient, config, state: State) -> None:
             break
 
         msg_id = msg["id"]
+        subject = msg.get("subject", "(无主题)")
+
         if state.is_processed(msg_id):
+            state.record_skipped(msg_id, subject, "已处理")
             continue
 
         # 跳过自己发出的邮件
         if config.gmail.email.lower() in msg.get("from", "").lower():
             state.mark_processed(msg_id)
+            state.record_skipped(msg_id, subject, "自己发出的邮件")
             continue
+
+        state.record_fetched(msg_id, subject)
 
         matches = match_rules(msg, config.rules)
         if not matches:
             state.mark_processed(msg_id)
+            state.record_skipped(msg_id, subject, "无匹配规则")
             continue
 
         for rule, _ in matches:
@@ -83,14 +96,22 @@ def _poll_once(client: IMAPClient, config, state: State) -> None:
                     config.forward,
                 )
                 forwarded_count += 1
+                state.record_forwarded(msg_id, subject, rule.name, rule.forward_to)
+                logger.info(
+                    "命中规则「%s」，「%s」→ 转发成功到 %s",
+                    rule.name,
+                    subject,
+                    "、".join(rule.forward_to),
+                )
             except Exception:
                 logger.exception("转发邮件失败")
 
         state.mark_processed(msg_id)
 
+    state.end_round()
     state.save()
     if forwarded_count:
-        logger.info("本次转发 %d 封邮件", forwarded_count)
+        logger.info("本次共转发 %d 封邮件", forwarded_count)
 
 
 def main() -> None:

@@ -9,6 +9,10 @@ gmail:
 poll:
   # 每 N 秒检查一次新邮件
   interval_seconds: 5
+  # 只拉取最近 N 小时内的邮件
+  fetch_within_hours: 1
+  # 单次最多拉取邮件数
+  fetch_max_count: 100
 
 # 转发规则（支持多条，按顺序匹配）
 rules:
