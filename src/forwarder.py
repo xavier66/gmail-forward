@@ -23,7 +23,11 @@ def forward_message(
     forward_config: ForwardConfig,
 ) -> bool:
     """转发邮件到指定收件人，返回是否成功"""
-    original_email = email.message_from_bytes(message["raw"])
+    raw = message.get("raw")
+    if not raw:
+        logger.error("邮件无原始数据，跳过: %s", message.get("subject", ""))
+        return False
+    original_email = email.message_from_bytes(raw)
 
     sent_count = 0
     for recipient in rule.forward_to:

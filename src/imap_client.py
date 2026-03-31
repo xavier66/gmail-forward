@@ -72,7 +72,10 @@ class IMAPClient:
         if not data or not data[0]:
             return None
 
-        raw_email = data[0][1]
+        # data[0] 可能是 tuple (b'1 (RFC822 {...})', bytes) 或 bytes
+        raw_email = data[0][1] if isinstance(data[0], tuple) else data[0]
+        if not raw_email:
+            return None
         msg = email.message_from_bytes(raw_email)
 
         subject = _decode_header_value(msg.get("Subject", ""))
